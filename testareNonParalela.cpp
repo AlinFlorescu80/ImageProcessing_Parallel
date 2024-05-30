@@ -2,6 +2,7 @@
 #include <fstream>
 #include <vector>
 #include <chrono>
+#include <cmath>
 
 using namespace std;
 using namespace std::chrono;
@@ -89,7 +90,7 @@ Image resizeImage(const Image& img, int newWidth, int newHeight) {
     resizedImg.width = newWidth;
     resizedImg.height = newHeight;
     resizedImg.pixels.resize(newWidth * newHeight);
-
+    
     for (int y = 0; y < newHeight; y++) {
         for (int x = 0; x < newWidth; x++) {
             int originalX = static_cast<int>((static_cast<double>(x) / newWidth) * img.width);
@@ -125,16 +126,49 @@ Image resizeImage(const Image& img, int newWidth, int newHeight) {
     return resizedImg;
 }
 
+Image perspectiveTransform(const Image& img, double matrix[3][3]) {
+    Image transformedImg;
+    transformedImg.width = img.width;
+    transformedImg.height = img.height;
+    transformedImg.pixels.resize(img.width * img.height);
 
+    for (int y = 0; y < img.height; y++) {
+        for (int x = 0; x < img.width; x++) {
+            double newX = (matrix[0][0] * x + matrix[0][1] * y + matrix[0][2]) / (matrix[2][0] * x + matrix[2][1] * y + matrix[2][2]);
+            double newY = (matrix[1][0] * x + matrix[1][1] * y + matrix[1][2]) / (matrix[2][0] * x + matrix[2][1] * y + matrix[2][2]);
+
+            int intNewX = static_cast<int>(newX);
+            int intNewY = static_cast<int>(newY);
+
+            if (intNewX >= 0 && intNewX < img.width && intNewY >= 0 && intNewY < img.height) {
+                transformedImg.pixels[y * img.width + x] = img.pixels[intNewY * img.width + intNewX];
+            } else {
+                transformedImg.pixels[y * img.width + x] = {0, 0, 0}; // Black color for out-of-bounds
+            }
+        }
+    }
+
+    return transformedImg;
+}
 
 int main() {
     auto start = high_resolution_clock::now();
 
-    Image originalImage = readBMP("C:\\Facultate\\PP\\exempluMare.bmp");
+    Image originalImage = readBMP("C:\\Facultate\\PP\\Proiect\\ProiectPPFinalTry\\exempluMare.bmp");
 
     Image resizedImage = resizeImage(originalImage, 2000, 2000);
 
-    writeBMP("C:\\Facultate\\PP\\imagineProcesata.bmp", resizedImage);
+    writeBMP("C:\\Facultate\\PP\\Proiect\\ProiectPPFinalTry\\imagineMareResized.bmp", resizedImage);
+
+    // Define the perspective transformation matrix
+   double matrix[3][3] = {
+        {1, 0.2, 0},
+        {0.2, 1, 0},
+        {0.0002, 0.0002, 1}
+    };
+    Image transformedImage = perspectiveTransform(resizedImage, matrix);
+
+    writeBMP("C:\\Facultate\\PP\\Proiect\\ProiectPPFinalTry\\imagineMareTransformed.bmp", transformedImage);
 
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<milliseconds>(stop - start);
